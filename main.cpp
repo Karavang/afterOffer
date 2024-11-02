@@ -32,6 +32,8 @@ void runAndMonitorProcess(const string &command)
         waitpid(pid, &status, 0);
         if (WIFEXITED(status))
         {
+            cout << "Device will be turned off in 5 sec" << endl;
+            sleep(5000);
             shutdownDevice();
         }
     }
