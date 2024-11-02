@@ -2,12 +2,16 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <cstdlib>
+#include <chrono>
+#include <thread>
 
 using namespace std;
 
 void shutdownDevice()
 {
-    system("shutdown now");
+    execlp("shutdown", "shutdown", "now", nullptr);
+    cerr << "Failed to execute shutdown command." << endl;
+    exit(1);
 }
 
 void runAndMonitorProcess(const string &command)
@@ -23,17 +27,23 @@ void runAndMonitorProcess(const string &command)
     {
 
         execlp(command.c_str(), command.c_str(), nullptr);
-        cerr << "Failed to execute command." << endl;
+        cerr << "Failed to execute command: " << command << endl;
         exit(1);
     }
     else
     {
+
         int status;
-        waitpid(pid, &status, 0);
+        if (waitpid(pid, &status, 0) == -1)
+        {
+            cerr << "Error waiting for child process." << endl;
+            return;
+        }
+
         if (WIFEXITED(status))
         {
-            cout << "Device will be turned off in 5 sec" << endl;
-            sleep(5000);
+            cout << "Device will be turned off in 5 seconds..." << endl;
+            this_thread::sleep_for(chrono::seconds(5));
             shutdownDevice();
         }
     }
