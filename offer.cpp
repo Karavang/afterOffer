@@ -4,8 +4,8 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <cstdlib>
-#include <cstring> // Include for strerror
-#include <errno.h> // Include for errno
+#include <cstring>
+#include <errno.h>
 
 using namespace std;
 
@@ -24,7 +24,7 @@ void shutdownDevice()
 
 void runAndMonitorProcess(const string &command)
 {
-    // Split the command into arguments
+
     istringstream iss(command);
     vector<string> args;
     string arg;
@@ -34,20 +34,18 @@ void runAndMonitorProcess(const string &command)
         args.push_back(arg);
     }
 
-    // Check if there are no arguments
     if (args.empty())
     {
         cerr << "No command to execute." << endl;
         return;
     }
 
-    // Prepare the argument list for execvp
     vector<char *> argv;
     for (auto &a : args)
     {
-        argv.push_back(&a[0]); // Convert string to char*
+        argv.push_back(&a[0]);
     }
-    argv.push_back(nullptr); // Null-terminate the argument list
+    argv.push_back(nullptr);
 
     pid_t pid = fork();
     if (pid < 0)
@@ -58,15 +56,15 @@ void runAndMonitorProcess(const string &command)
 
     if (pid == 0)
     {
-        // In child process
+
         execvp(argv[0], argv.data());
-        // If execvp returns, it means it failed
-        cerr << "Failed to execute command: " << strerror(errno) << endl; // Print the error
+
+        cerr << "Failed to execute command: " << strerror(errno) << endl;
         exit(1);
     }
     else
     {
-        // In parent process
+
         int status;
         waitpid(pid, &status, 0);
         if (WIFEXITED(status))
