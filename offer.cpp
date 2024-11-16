@@ -1,21 +1,54 @@
 #include <iostream>
+#include <sstream>
+#include <vector>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <cstdlib>
-#include <chrono>
-#include <thread>
+#include <cstring> // Include for strerror
+#include <errno.h> // Include for errno
 
 using namespace std;
 
-void shutdownDevice()
+void printl(const string &mystr)
 {
-    execlp("shutdown", "shutdown", "now", nullptr);
-    cerr << "Failed to execute shutdown command." << endl;
-    exit(1);
+    cout << mystr << endl;
+}
+
+void shutdownDevice()
+
+{
+    printl("Device will be shuted down after 5 seconds");
+    sleep(5);
+    system("shutdown now");
 }
 
 void runAndMonitorProcess(const string &command)
 {
+    // Split the command into arguments
+    istringstream iss(command);
+    vector<string> args;
+    string arg;
+
+    while (iss >> arg)
+    {
+        args.push_back(arg);
+    }
+
+    // Check if there are no arguments
+    if (args.empty())
+    {
+        cerr << "No command to execute." << endl;
+        return;
+    }
+
+    // Prepare the argument list for execvp
+    vector<char *> argv;
+    for (auto &a : args)
+    {
+        argv.push_back(&a[0]); // Convert string to char*
+    }
+    argv.push_back(nullptr); // Null-terminate the argument list
+
     pid_t pid = fork();
     if (pid < 0)
     {
@@ -25,25 +58,19 @@ void runAndMonitorProcess(const string &command)
 
     if (pid == 0)
     {
-
-        execlp(command.c_str(), command.c_str(), nullptr);
-        cerr << "Failed to execute command: " << command << endl;
+        // In child process
+        execvp(argv[0], argv.data());
+        // If execvp returns, it means it failed
+        cerr << "Failed to execute command: " << strerror(errno) << endl; // Print the error
         exit(1);
     }
     else
     {
-
+        // In parent process
         int status;
-        if (waitpid(pid, &status, 0) == -1)
-        {
-            cerr << "Error waiting for child process." << endl;
-            return;
-        }
-
+        waitpid(pid, &status, 0);
         if (WIFEXITED(status))
         {
-            cout << "Device will be turned off in 5 seconds..." << endl;
-            this_thread::sleep_for(chrono::seconds(5));
             shutdownDevice();
         }
     }
@@ -51,13 +78,17 @@ void runAndMonitorProcess(const string &command)
 
 int main(int argc, char *argv[])
 {
-    if (argc < 2)
+    string command;
+    for (int i = 1; i < argc; ++i)
     {
-        cerr << "Usage: " << argv[0] << " <command>" << endl;
-        return 1;
+        command += argv[i];
+        if (i < argc - 1)
+        {
+            command += " ";
+        }
     }
 
-    string command = argv[1];
+    printl("Command to execute: " + command);
     runAndMonitorProcess(command);
     return 0;
 }
